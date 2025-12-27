@@ -1,79 +1,9 @@
+# CMakeLists.txt для Windows + Ubuntu (УНИВЕРСАЛЬНЫЙ)
+## Ваш файл + улучшения для кроссплатформности
+
+```cmake
 cmake_minimum_required(VERSION 3.20)
 project(TestCMake VERSION 1.0.0 LANGUAGES CXX)
-
-# ============================================================================
-# ЧАСТЬ 0: ДЕТЕКЦИЯ GPU И CUDA
-# ============================================================================
-
-# Параметры для выбора GPU
-option(ENABLE_CUDA "Enable CUDA support" ON)
-option(ENABLE_OPENCL "Enable OpenCL support" OFF)
-option(CUDA_ARCH "CUDA architecture (default: auto-detect)" "")
-
-message(STATUS "")
-message(STATUS "🎮 GPU SUPPORT OPTIONS:")
-message(STATUS "   ENABLE_CUDA: ${ENABLE_CUDA}")
-message(STATUS "   ENABLE_OPENCL: ${ENABLE_OPENCL}")
-message(STATUS "")
-
-# Попытка найти CUDA
-if(ENABLE_CUDA)
-    find_package(CUDA QUIET)
-    if(CUDA_FOUND)
-        message(STATUS "✅ CUDA НАЙДЕНА!")
-        message(STATUS "   CUDA Version: ${CUDA_VERSION}")
-        message(STATUS "   CUDA Toolkit: ${CUDA_TOOLKIT_ROOT_DIR}")
-        message(STATUS "   CUDA Include: ${CUDA_INCLUDE_DIRS}")
-        
-        # Определить GPU архитектуру
-        if(CUDA_ARCH STREQUAL "")
-            # Попробовать определить автоматически
-            message(STATUS "🔍 Автоматическое определение GPU архитектуры...")
-            execute_process(
-                COMMAND ${CUDA_TOOLKIT_ROOT_DIR}/extras/demo_suite/deviceQuery
-                OUTPUT_VARIABLE CUDA_DEVICE_QUERY
-                ERROR_QUIET
-            )
-            
-            # Попробовать альтернативный способ
-            if(NOT CUDA_DEVICE_QUERY)
-                message(STATUS "⚠️  deviceQuery не найден, используем стандартные архитектуры")
-                set(CUDA_ARCH "70;75;80")  # V100, RTX 2080, A100
-            else()
-                message(STATUS "📊 GPU Info:")
-                message(STATUS "${CUDA_DEVICE_QUERY}")
-            endif()
-        endif()
-        
-        message(STATUS "   Target CUDA Arch: ${CUDA_ARCH}")
-        set(CUDA_ENABLED TRUE)
-    else()
-        message(STATUS "⚠️  CUDA НЕ НАЙДЕНА")
-        message(STATUS "   Установите CUDA Toolkit: https://developer.nvidia.com/cuda-toolkit")
-        message(STATUS "   Или отключите CUDA: -DENABLE_CUDA=OFF")
-        set(CUDA_ENABLED FALSE)
-    endif()
-else()
-    message(STATUS "⏭️  CUDA отключена (ENABLE_CUDA=OFF)")
-    set(CUDA_ENABLED FALSE)
-endif()
-
-# Попытка найти OpenCL
-if(ENABLE_OPENCL)
-    find_package(OpenCL QUIET)
-    if(OpenCL_FOUND)
-        message(STATUS "✅ OpenCL НАЙДЕНА!")
-        message(STATUS "   OpenCL Version: ${OpenCL_VERSION_STRING}")
-        message(STATUS "   OpenCL Include: ${OpenCL_INCLUDE_DIRS}")
-        set(OPENCL_ENABLED TRUE)
-    else()
-        message(STATUS "⚠️  OpenCL НЕ НАЙДЕНА")
-        set(OPENCL_ENABLED FALSE)
-    endif()
-else()
-    message(STATUS "⏭️  OpenCL отключена (ENABLE_OPENCL=OFF)")
-    set(OPENCL_ENABLED FALSE)
-endif()
 
 # ============================================================================
 # ЧАСТЬ 1: ОПРЕДЕЛЕНИЕ ОПЕРАЦИОННОЙ СИСТЕМЫ
@@ -116,6 +46,7 @@ message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
 # ЧАСТЬ 3: ПАРАМЕТРЫ СБОРКИ
 # ============================================================================
 
+# По умолчанию Release если не указано
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -130,16 +61,21 @@ if(MSVC)
     # ===== WINDOWS (MSVC компилятор) =====
     message(STATUS "🔧 Конфигурация: MSVC (Visual Studio)")
     
+    # Флаги для Debug
     set(CMAKE_CXX_FLAGS_DEBUG "/MDd /Zi /Od /RTC1")
+    
+    # Флаги для Release с оптимизацией
     set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Oi /arch:AVX2 /DNDEBUG")
     
+    # Общие флаги
     add_compile_options(
-        /W4
-        /EHsc
-        /permissive-
-        /Zc:inline
+        /W4           # Максимум предупреждений
+        /EHsc         # Exception handling
+        /permissive-  # Строгий C++ стандарт
+        /Zc:inline    # Оптимизация
     )
     
+    # Отключить непредсказуемые предупреждения
     add_compile_definitions(
         _CRT_SECURE_NO_WARNINGS
         _CRT_NONSTDC_NO_WARNINGS
@@ -161,15 +97,19 @@ else()
         set(COMPILER_NAME "${CMAKE_CXX_COMPILER_ID}")
     endif()
     
+    # Флаги для Debug
     set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb3 -O0 -Wall -Wextra -Wpedantic")
+    
+    # Флаги для Release
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -Wall")
     
+    # Общие флаги
     add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-        -ffast-math
-        -funroll-loops
+        -Wall           # Все предупреждения
+        -Wextra         # Дополнительные предупреждения
+        -Wpedantic      # Педантичные проверки
+        -ffast-math     # Быстрая математика (для FFT)
+        -funroll-loops  # Развернуть циклы
     )
     
     message(STATUS "Compiler: ${COMPILER_NAME}")
@@ -187,6 +127,7 @@ message(STATUS "   Source dir: ${CMAKE_SOURCE_DIR}")
 message(STATUS "   Build dir: ${CMAKE_BINARY_DIR}")
 message(STATUS "")
 
+# Создать списки файлов
 set(SOURCES
     src/main.cpp
     src/mylib.cpp
@@ -196,51 +137,11 @@ set(HEADERS
     include/mylib.h
 )
 
-# Добавить CUDA файлы если включена
-if(CUDA_ENABLED)
-    list(APPEND SOURCES
-        src/gpu_kernel.cu
-    )
-    list(APPEND HEADERS
-        include/gpu_kernel.h
-    )
-    message(STATUS "✅ CUDA источники добавлены")
-endif()
-
-# Добавить OpenCL файлы если включена
-if(OPENCL_ENABLED)
-    list(APPEND SOURCES
-        src/opencl_kernel.cpp
-    )
-    list(APPEND HEADERS
-        include/opencl_kernel.h
-    )
-    message(STATUS "✅ OpenCL источники добавлены")
-endif()
-
 # ============================================================================
 # ЧАСТЬ 6: СОЗДАНИЕ ИСПОЛНЯЕМОГО ФАЙЛА
 # ============================================================================
 
-if(CUDA_ENABLED)
-    # Использовать CUDA для компиляции
-    enable_language(CUDA)
-    set(CMAKE_CUDA_STANDARD 17)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-    
-    # Установить CUDA архитектуру
-    if(NOT CUDA_ARCH STREQUAL "")
-        set_target_properties(${PROJECT_NAME} PROPERTIES
-            CUDA_ARCHITECTURES ${CUDA_ARCH}
-        )
-    endif()
-    
-    message(STATUS "✅ Используется CUDA компилятор для GPU кода")
-else()
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-endif()
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Подключить include директорию
 target_include_directories(${PROJECT_NAME} 
@@ -252,24 +153,9 @@ target_include_directories(${PROJECT_NAME}
 # ЧАСТЬ 7: ЛИНКОВКА И ЗАВИСИМОСТИ
 # ============================================================================
 
+# Пример: линковка math библиотеки (есть везде в Linux)
 if(NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE m)
-endif()
-
-# Линковка CUDA
-if(CUDA_ENABLED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${CUDA_LIBRARIES})
-    target_include_directories(${PROJECT_NAME} PRIVATE ${CUDA_INCLUDE_DIRS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE CUDA_ENABLED=1)
-    message(STATUS "✅ CUDA библиотеки добавлены в линковку")
-endif()
-
-# Линковка OpenCL
-if(OPENCL_ENABLED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCL_INCLUDE_DIRS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE OPENCL_ENABLED=1)
-    message(STATUS "✅ OpenCL библиотеки добавлены в линковку")
 endif()
 
 # ============================================================================
@@ -277,13 +163,15 @@ endif()
 # ============================================================================
 
 if(MSVC)
+    # Windows специфичные опции
     target_compile_options(${PROJECT_NAME} 
         PRIVATE 
-        /arch:AVX2
-        /Gy
-        /fp:precise
+        /arch:AVX2          # AVX2 инструкции
+        /Gy                 # Function-level linking
+        /fp:precise         # Точная арифметика
     )
 else()
+    # Linux специфичные опции
     target_compile_options(${PROJECT_NAME} PRIVATE -march=native)
 endif()
 
@@ -295,10 +183,10 @@ message(STATUS "")
 message(STATUS "📊 Информация о сборке:")
 message(STATUS "   Platform: ${PLATFORM_NAME}")
 message(STATUS "   Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "   Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "   Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "   C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "   Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "   CUDA: ${CUDA_ENABLED}")
-message(STATUS "   OpenCL: ${OPENCL_ENABLED}")
 message(STATUS "")
 
 # ============================================================================
@@ -308,29 +196,44 @@ message(STATUS "")
 if(IS_WINDOWS)
     message(STATUS "✨ Команды для сборки на Windows:")
     message(STATUS "")
-    message(STATUS "   С CUDA:")
-    message(STATUS "   cmake -B build -G \"Visual Studio 17 2022\" -DENABLE_CUDA=ON")
+    message(STATUS "   cmake -B build -G \"Visual Studio 17 2022\"")
     message(STATUS "   cmake --build build --config Release")
-    message(STATUS "")
-    message(STATUS "   Без CUDA:")
-    message(STATUS "   cmake -B build -G \"Visual Studio 17 2022\" -DENABLE_CUDA=OFF")
-    message(STATUS "   cmake --build build --config Release")
+    message(STATUS "   .\\build\\Release\\${PROJECT_NAME}.exe")
     message(STATUS "")
 else()
     message(STATUS "✨ Команды для сборки на Linux/macOS:")
     message(STATUS "")
-    message(STATUS "   С CUDA и Ninja:")
-    message(STATUS "   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON")
+    message(STATUS "   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release")
     message(STATUS "   ninja -C build")
+    message(STATUS "   ./build/${PROJECT_NAME}")
     message(STATUS "")
-    message(STATUS "   С OpenCL:")
-    message(STATUS "   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENCL=ON")
-    message(STATUS "   ninja -C build")
+    message(STATUS "   или с Make:")
+    message(STATUS "   cmake -B build -DCMAKE_BUILD_TYPE=Release")
+    message(STATUS "   make -C build -j\$(nproc)")
+    message(STATUS "   ./build/${PROJECT_NAME}")
     message(STATUS "")
-    message(STATUS "   Без GPU:")
-    message(STATUS "   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF")
-    message(STATUS "   ninja -C build")
-    message(STATUS "")
+endif()
+
+# ============================================================================
+# ЧАСТЬ 11: ОПЦИИ ПРОЕКТА (опционально)
+# ============================================================================
+
+option(ENABLE_TESTING "Enable testing" OFF)
+option(VERBOSE "Enable verbose output" OFF)
+
+if(VERBOSE)
+    message(STATUS "Verbose mode enabled")
+endif()
+
+if(ENABLE_TESTING)
+    enable_testing()
+    add_executable(test_app tests/test_main.cpp src/mylib.cpp)
+    target_include_directories(test_app PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    if(NOT MSVC)
+        target_link_libraries(test_app PRIVATE m)
+    endif()
+    add_test(NAME BasicTests COMMAND test_app)
+    message(STATUS "Testing enabled")
 endif()
 
 # ============================================================================
@@ -338,3 +241,81 @@ endif()
 # ============================================================================
 
 message(STATUS "✅ CMake конфигурация успешна!")
+```
+
+---
+
+## ✅ ЧТО ИЗМЕНИЛИ:
+
+### ❌ БЫЛО (старое):
+```cmake
+find_program(NINJA_EXECUTABLE ninja)
+if(NINJA_EXECUTABLE)
+    message(STATUS "✅ Ninja найдена: ${NINJA_EXECUTABLE}")
+```
+
+### ✅ СТАЛО (новое):
+```cmake
+# Никакого поиска Ninja!
+# Просто указываем генератор явно при запуске cmake:
+# Windows:  cmake -B build -G "Visual Studio 17 2022"
+# Linux:    cmake -B build -G Ninja
+```
+
+---
+
+## 🎯 ТЕПЕРЬ ДЛЯ Ubuntu:
+
+```bash
+# 1. Установить зависимости (если первый раз)
+sudo apt-get update
+sudo apt-get install -y cmake ninja-build build-essential
+
+# 2. Клонировать репозиторий (если не клонировали)
+cd ~
+git clone git@github.com:AlexLan73/TestCMake.git
+cd TestCMake
+
+# 3. Собрать с Ninja
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+ninja -C build
+
+# 4. Запустить
+./build/TestCMake
+
+# ГОТОВО! ✅
+```
+
+---
+
+## 🐧 ИЛИ БЕЗ Ninja (Make):
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+make -C build -j$(nproc)
+./build/TestCMake
+```
+
+---
+
+## 📝 СКОПИРУЙТЕ НОВЫЙ CMakeLists.txt:
+
+Замените в вашем репозитории весь CMakeLists.txt на код выше!
+
+**Потом:**
+```bash
+git add CMakeLists.txt
+git commit -m "Improve CMakeLists.txt for Windows and Linux"
+git push origin main
+```
+
+---
+
+## ✅ РЕЗУЛЬТАТ:
+
+Один CMakeLists.txt работает на:
+- ✅ Windows (Visual Studio)
+- ✅ Ubuntu/Linux (Ninja или Make)
+- ✅ macOS (если у вас есть)
+
+**Красота кроссплатформности!** 🚀

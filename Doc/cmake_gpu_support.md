@@ -1,3 +1,7 @@
+# CMakeLists.txt с поддержкой CUDA/GPU
+## Автоматическая детекция GPU и компиляция
+
+```cmake
 cmake_minimum_required(VERSION 3.20)
 project(TestCMake VERSION 1.0.0 LANGUAGES CXX)
 
@@ -240,7 +244,7 @@ if(CUDA_ENABLED)
     message(STATUS "✅ Используется CUDA компилятор для GPU кода")
 else()
     add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-endif()
+fi()
 
 # Подключить include директорию
 target_include_directories(${PROJECT_NAME} 
@@ -338,3 +342,82 @@ endif()
 # ============================================================================
 
 message(STATUS "✅ CMake конфигурация успешна!")
+```
+
+---
+
+## 🎯 КАК ИСПОЛЬЗОВАТЬ:
+
+### Windows + CUDA:
+```powershell
+cmake -B build -G "Visual Studio 17 2022" -DENABLE_CUDA=ON
+cmake --build build --config Release
+```
+
+### Linux + CUDA:
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON
+ninja -C build
+```
+
+### Linux + OpenCL:
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -ENABLE_OPENCL=ON
+ninja -C build
+```
+
+### Без GPU (CPU only):
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF
+ninja -C build
+```
+
+---
+
+## 📝 ЧТО ДОБАВИЛИ:
+
+✅ **Автоматическая детекция CUDA**  
+✅ **Автоматическая детекция OpenCL**  
+✅ **Определение GPU архитектуры** (V100, RTX, A100)  
+✅ **Условная компиляция GPU кода**  
+✅ **Параметры -DENABLE_CUDA и -DENABLE_OPENCL**  
+
+---
+
+## 🚀 СОЗДАТЬ GPU ФАЙЛЫ:
+
+### `src/gpu_kernel.cu`:
+```cuda
+#include "../include/gpu_kernel.h"
+
+__global__ void addKernel(int *c, int *a, int *b) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    c[i] = a[i] + b[i];
+}
+
+void gpuAdd(int *c, int *a, int *b, int size) {
+    addKernel<<<(size + 255) / 256, 256>>>(c, a, b);
+}
+```
+
+### `include/gpu_kernel.h`:
+```cpp
+#ifndef GPU_KERNEL_H
+#define GPU_KERNEL_H
+
+void gpuAdd(int *c, int *a, int *b, int size);
+
+#endif
+```
+
+---
+
+## ✅ ГОТОВО!
+
+Теперь ваш проект:
+- 🎮 Автоматически детектирует GPU
+- 🏗️ Собирает GPU код если CUDA/OpenCL доступны
+- 💻 Работает на CPU если GPU не найдена
+- 🔧 Гибко настраивается через параметры CMake
+
+**Красота!** 🚀
