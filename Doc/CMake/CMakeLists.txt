@@ -10,38 +10,6 @@ option(ENABLE_CUDA "Enable CUDA support" ON)
 option(ENABLE_OPENCL "Enable OpenCL support" OFF)
 option(CUDA_ARCH "CUDA architecture (default: auto-detect)" "")
 
-# ============================================================================
-# ЧАСТЬ 0: ДЕТЕКЦИЯ GPU И CUDA
-# ============================================================================
-
-# Параметры для выбора GPU
-option(ENABLE_CUDA "Enable CUDA support" ON)
-option(ENABLE_OPENCL "Enable OpenCL support" OFF)
-option(CUDA_ARCH "CUDA architecture (default: auto-detect)" "")
-
-# ✅ ДОБАВИТЬ ЭТО - переменная TYPE_GPU
-set(TYPE_GPU "" CACHE STRING "GPU Type (e.g., RTX 2080ti, V100, A100)")
-
-# ✅ Автоматически определить GPU по архитектуре
-if(TYPE_GPU STREQUAL "")
-    if(CUDA_ARCH MATCHES "52")
-        set(TYPE_GPU "GTX 960 / K40")
-    elseif(CUDA_ARCH MATCHES "75")
-        set(TYPE_GPU "RTX 2080/2080ti")
-    elseif(CUDA_ARCH MATCHES "80")
-        set(TYPE_GPU "A100 / RTX 3090")
-    elseif(CUDA_ARCH MATCHES "70")
-        set(TYPE_GPU "V100")
-    else()
-        set(TYPE_GPU "Unknown/Auto-detect")
-    endif()
-endif()
-
-message(STATUS "🎮 GPU TYPE: ${TYPE_GPU}")
-
-
-
-
 message(STATUS "")
 message(STATUS "🎮 GPU SUPPORT OPTIONS:")
 message(STATUS "   ENABLE_CUDA: ${ENABLE_CUDA}")
