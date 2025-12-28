@@ -87,3 +87,26 @@ ninja -C build
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF
 ninja -C build
 ```
+*******************************************************
+cmake_minimum_required(VERSION 3.20)
+
+# DEBUG: Проверяем что CMake получил
+#message(STATUS "============================================")
+#message(STATUS "CMAKE CACHE VARIABLES (from CMakePresets):")
+#message(STATUS "CUDA_ARCH = '${CUDA_ARCH}'")
+#message(STATUS "TYPE_GPU = '${TYPE_GPU}'")
+#message(STATUS "CMAKE_BUILD_TYPE = '${CMAKE_BUILD_TYPE}'")
+#message(STATUS "ENABLE_CUDA = '${ENABLE_CUDA}'")
+#message(STATUS "ENABLE_OPENCL = '${ENABLE_OPENCL}'")
+#message(STATUS "============================================")
+
+project(TestCMake)
+
+очистить
+# Ubuntu
+rm -rf build/
+rm -rf CMakeCache.txt
+rm -rf CMakeFiles/
+
+# Потом собирай заново
+./start.sh de

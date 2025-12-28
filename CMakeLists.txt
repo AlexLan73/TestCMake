@@ -1,4 +1,7 @@
+
 cmake_minimum_required(VERSION 3.20)
+
+
 project(TestCMake VERSION 1.0.0 LANGUAGES CXX)
 
 # ============================================================================
@@ -8,6 +11,39 @@ project(TestCMake VERSION 1.0.0 LANGUAGES CXX)
 # Параметры для выбора GPU
 option(ENABLE_CUDA "Enable CUDA support" ON)
 option(ENABLE_OPENCL "Enable OpenCL support" OFF)
+
+################################################################################
+# GPU Type Detection
+################################################################################
+# Сначала объявляем переменную ДО проверки CUDA_ARCH
+
+# ВАЖНО: Объявляем как option() чтобы CMakePresets мог передать значение
+option(TYPE_GPU "GPU Type (e.g., RTX 2080ti, RTX 3060, A100, V100)" "")
+# ВАЖНО: Объявляем как option() чтобы CMakePresets мог передать значение
+
+message(STATUS "DEBUG: TYPE_GPU from CMakePresets = '${TYPE_GPU}'")
+message(STATUS "DEBUG: CUDA_ARCH = '${CUDA_ARCH}'")
+
+mark_as_advanced(TYPE_GPU)
+
+# ВАЖНО: Проверяем СНАЧАЛА значение из CMakePresets (уже загруженное)
+# Если оно пустое - только тогда auto-detect по CUDA_ARCH
+if(NOT TYPE_GPU OR TYPE_GPU STREQUAL "")
+    # Auto-detect по CUDA_ARCH если TYPE_GPU не задан в CMakePresets
+    if(CUDA_ARCH MATCHES "75")
+        set(TYPE_GPU "RTX 2080 / RTX 2080ti")
+    elseif(CUDA_ARCH MATCHES " 80|88|89")
+        set(TYPE_GPU "A100 / RTX 30690")
+    elseif(CUDA_ARCH MATCHES "70")
+        set(TYPE_GPU "V100 / Tesla P100")
+    else()
+        set(TYPE_GPU "Unknown / Auto-detect")
+    endif()
+endif()
+
+# message(STATUS "🎮 GPU TYPE: ${TYPE_GPU}")
+
+
 option(CUDA_ARCH "CUDA architecture (default: auto-detect)" "")
 
 # ============================================================================
